@@ -1,0 +1,68 @@
+import numpy as np
+import numpy
+from keras.models import Sequential
+from keras.layers.recurrent import LSTM
+from keras.callbacks import ModelCheckpoint
+from keras.utils import np_utils
+from keras.layers.core import Dense, Activation,Dropout  
+from keras.callbacks import ModelCheckpoint
+import sys
+
+filename = "quantum.txt"
+raw_text = open(filename).read()
+raw_text = raw_text.lower()
+chars = sorted(list(set(raw_text)))
+char_to_int = dict((c, i) for i, c in enumerate(chars))
+n_chars = len(raw_text)
+n_vocab = len(chars)
+print("Total Characters: ", n_chars)
+print("Total Vocab: ", n_vocab)
+
+seq_length = 100
+dataX = []
+dataY = []
+for i in range(0, n_chars - seq_length, 1):
+	seq_in = raw_text[i:i + seq_length]
+	seq_out = raw_text[i + seq_length]
+	dataX.append([char_to_int[char] for char in seq_in])
+	dataY.append(char_to_int[seq_out])
+n_patterns = len(dataX)
+print("Total Patterns: ", n_patterns)
+
+X = numpy.reshape(dataX, (n_patterns, 1, 100))
+X = X / float(n_vocab)
+y = np_utils.to_categorical(dataY)
+y=dataY
+y = np_utils.to_categorical(dataY)
+
+model = Sequential()
+model.add(LSTM(100, 10, return_sequences=True))  
+model.add(LSTM(10, 10))  
+model.add(Dense(10, 42))
+model.add(Activation("softmax"))  
+model.compile(loss="categorical_crossentropy", optimizer="rmsprop")  
+model.fit(X, y, nb_epoch=10, batch_size=600)
+
+int_to_char = dict((i, c) for i, c in enumerate(chars))
+
+pattern = dataX[1001]
+data2=pattern[0:1000]
+print("Seed:")
+print("\"", ''.join([int_to_char[value] for value in data2]), "\"")
+
+s=[]
+for i in range(40):
+    pattern = dataX
+    f=20+i
+    g=f+300
+    len(pattern[f:g])
+    h=np.array(pattern[f:g])
+    x=np.reshape(h,(300,1,100))
+    x = np.array(x) / float(n_vocab)
+    prediction = model.predict(x, verbose=0)
+    index = numpy.argmax(prediction[i])
+    result = int_to_char[index]
+    s.append(result)
+    print("".join(s))
+
+### Code adapted from: http://machinelearningmastery.com for keras 0.2.0
