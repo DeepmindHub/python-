@@ -1,0 +1,71 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation
+from keras.optimizers import SGD
+from keras.callbacks import LearningRateScheduler,EarlyStopping, ModelCheckpoint
+from keras import backend as K
+
+epochs = 50
+learning_rate = 0.01
+decay_rate = 2e-6
+momentum = 0.9
+reg=0.001
+
+sd=[]
+class LossHistory(keras.callbacks.Callback):
+    def on_train_begin(self, logs={}):
+        self.losses = [1,1]
+
+    def on_epoch_end(self, batch, logs={}):
+        self.losses.append(logs.get('loss'))
+        sd.append(step_decay(len(self.losses)))
+        print('learning rate:', step_decay(len(self.losses)))
+        print('derivative of loss:', 2*np.sqrt((self.losses[-1])))
+
+def my_init(shape, name=None):
+    value = np.random.random(shape)
+    return K.variable(value, name=name)
+
+def step_decay(losses):
+    if float(2*np.sqrt(np.array(history.losses[-1])))<1.1:
+        lrate=0.01*1/(1+0.1*len(history.losses))
+        momentum=0.2
+        decay_rate=0.0
+        return lrate
+    else:
+        lrate=0.01
+        return lrate
+
+model = Sequential()
+model.add(Dense(16, input_dim=12, init=my_init))
+model.add(Activation('tanh'))
+model.add(Dropout(0.5))
+model.add(Dense(2, init='uniform'))
+model.add(Activation('softmax'))
+sgd = SGD(lr=0.01, decay=1e-6, momentum=0.97, nesterov=True)
+model.compile(loss='categorical_crossentropy',
+              optimizer=sgd,metrics=['accuracy'])
+
+aa=pd.read_csv('questao1NN.csv',sep=',',header=0)
+
+y_train=np.array(pd.get_dummies(aa['Desligamento'][0:1800]))
+y_test=np.array(pd.get_dummies(aa['Desligamento'][1801:1999]))
+
+X_train=np.array(aa.ix[:,2:14][0:1800])
+X_test=np.array(aa.ix[:,2:14][1801:1999])
+
+history=LossHistory()
+lrate=LearningRateScheduler(step_decay)
+
+model.fit(X_train, y_train,nb_epoch=epochs,batch_size=100,callbacks=[history,lrate])
+
+model.evaluate(X_train, y_train, batch_size=16)
+model.predict(X_train, batch_size=32, verbose=0)
+pred2=model.predict_classes(X_test, batch_size=32, verbose=0)
+
+print('Accuracy Test Set=',len(np.where(pred2-aa['Desligamento'][1801:1999]==0)[0])/198)
+
+''' Must apply a threshold to deal wih imbalanced classes'''
